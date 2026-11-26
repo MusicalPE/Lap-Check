@@ -1,7 +1,7 @@
 /* 실험첵! Lab-Check! — 앱 본체 */
 (function () {
   "use strict";
-  var APP_VERSION = "1.1.2";
+  var APP_VERSION = "1.2.0";
   var ASSET = window.SCI_ASSETS || { logoH: "assets/logo-horizontal.png", logoS: "assets/logo-stacked.png" };
   var D = window.SCI_DATA;
   var $app = document.getElementById("app");

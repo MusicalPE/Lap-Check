@@ -3,7 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.1.2">
+<script>
+  // 카카오톡 안에서 열리면 휴대폰 기본 브라우저(새 창)로 다시 열기
+  (function () {
+    var ua = navigator.userAgent || "";
+    if (/KAKAOTALK/i.test(ua) && location.protocol.indexOf("http") === 0) {
+      location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(location.href);
+    }
+  })();
+</script>
+<meta name="description" content="QR 한 번으로 조별 실험을 한 단계씩. 준비물·안전 약속·실험 순서·결과·생각해 볼 질문을 아이들 손에.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="실험첵! Lab-Check!">
+<meta property="og:title" content="실험첵! Lab-Check! 과학 실험 수업 도우미">
+<meta property="og:description" content="QR 한 번으로 조별 실험을 한 단계씩. 준비물·안전 약속·실험 순서·결과·생각해 볼 질문을 아이들 손에.">
+<meta property="og:url" content="https://musicalpe.github.io/Lap-Check/">
+<meta property="og:image" content="https://musicalpe.github.io/Lap-Check/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="app-version" content="1.2.0">
 <title>실험첵! Lab-Check!</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
@@ -128,9 +147,9 @@
 </head>
 <body>
 <div id="app"></div>
-<script src="lib/qrcode.js?v=1.1.2"></script>
-<script src="data.js?v=1.1.2"></script>
-<script src="firebase-config.js?v=1.1.2b"></script>
-<script src="app.js?v=1.1.2"></script>
+<script src="lib/qrcode.js?v=1.2.0"></script>
+<script src="data.js?v=1.2.0"></script>
+<script src="firebase-config.js?v=1.2.0"></script>
+<script src="app.js?v=1.2.0"></script>
 </body>
 </html>
