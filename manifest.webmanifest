@@ -1,0 +1,12 @@
+{
+  "name": "실험첵! Lab-Check!",
+  "short_name": "실험첵!",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#1d7a62",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

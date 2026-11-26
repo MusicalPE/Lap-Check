@@ -3,12 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.1.1">
+<meta name="app-version" content="1.1.2">
 <title>실험첵! Lab-Check!</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1d7a62">
 <style>
   :root{
-    --bg:#f6f7f4; --card:#ffffff; --ink:#1f2a24; --sub:#5d6b63; --line:#e3e7e1;
-    --main:#2f7d5b; --main-soft:#e4f1ea; --warn:#b4472f; --warn-soft:#fbebe6;
+    --bg:#f6f7f4; --card:#ffffff; --ink:#16232b; --sub:#5d6b63; --line:#e3e7e1;
+    --main:#1d7a62; --main-soft:#e4f1ea; --warn:#b4472f; --warn-soft:#fbebe6;
     --gold:#b8862a; --gold-soft:#f8f0dd; --gray:#c9cfc8; --radius:14px;
   }
   *{box-sizing:border-box}
@@ -22,6 +27,8 @@
   header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;
     background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
   .brand{font-weight:800;font-size:18px;letter-spacing:-.3px}
+  .brand img{height:36px;width:auto;display:block}
+  .brand{display:flex;align-items:center;gap:8px}
   .brand small{font-weight:500;color:var(--sub);font-size:12px;margin-left:6px}
   .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px}
   .btn.main{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}

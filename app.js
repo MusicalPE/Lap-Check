@@ -1,7 +1,8 @@
 /* 실험첵! Lab-Check! — 앱 본체 */
 (function () {
   "use strict";
-  var APP_VERSION = "1.1.1";
+  var APP_VERSION = "1.1.2";
+  var ASSET = window.SCI_ASSETS || { logoH: "assets/logo-horizontal.png", logoS: "assets/logo-stacked.png" };
   var D = window.SCI_DATA;
   var $app = document.getElementById("app");
   var params = new URLSearchParams(location.search);
@@ -236,7 +237,7 @@
   function clearSubs() { T.unsub.forEach(function (f) { f(); }); T.unsub = []; }
 
   function header(right) {
-    return '<header class="top"><div class="brand">실험첵! <span style="font-weight:600;color:var(--sub);font-size:13px">Lab-Check!</span>' + (DEMO ? '<small>체험 모드</small>' : "") + "</div>" +
+    return '<header class="top"><div class="brand"><img src="' + ASSET.logoH + '" alt="실험첵! Lab-Check!">' + (DEMO ? '<small>체험 모드</small>' : "") + "</div>" +
       '<div class="row">' + (right || "") + "</div></header>";
   }
   function footer() {
@@ -247,7 +248,7 @@
   function renderLanding() {
     clearSubs();
     $app.innerHTML = header("") +
-      '<div class="wrap narrow"><div class="hero"><h1>실험 준비물과 순서를<br>아이들 손에 바로</h1>' +
+      '<div class="wrap narrow"><div class="hero"><img src="' + ASSET.logoS + '" alt="실험첵! Lab-Check!" style="width:200px;max-width:60%;height:auto;margin:0 auto 18px;display:block"><h1>실험 준비물과 순서를<br>아이들 손에 바로</h1>' +
       '<p class="muted">실험을 고르고 QR을 띄우면, 조마다 준비물·실험 순서·생각할 질문을 볼 수 있어요.<br>조별로 누른 "다했어요"는 선생님 화면에 바로 모여요.</p></div>' +
       '<div class="card stack center">' +
       '<button class="btn main big" id="login">' + (DEMO ? "체험 선생님으로 들어가기" : "구글 계정으로 로그인") + "</button>" +
