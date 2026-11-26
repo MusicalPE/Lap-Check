@@ -1,10 +1,9 @@
-// 파이어베이스 설정 — 콘솔의 [프로젝트 설정 > 내 앱 > SDK 설정 및 구성]에서 복사해 아래를 바꿔 넣으세요.
-// apiKey 가 비어 있으면 앱은 "체험 모드"(이 기기 안에서만 저장)로 돌아갑니다.
+// 파이어베이스 설정 (웹 앱용 공개 값 — 데이터 보호는 Firestore 규칙이 맡습니다)
 window.FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyDUp9z5RuXxsWgIqM1M-dx4yJ5TQFw_hp0",
+  authDomain: "lab-check-pe.firebaseapp.com",
+  projectId: "lab-check-pe",
+  storageBucket: "lab-check-pe.firebasestorage.app",
+  messagingSenderId: "786023601414",
+  appId: "1:786023601414:web:f7683731c44338c9833a87"
 };
