@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1.1.1">
+<title>실험첵! Lab-Check!</title>
+<style>
+  :root{
+    --bg:#f6f7f4; --card:#ffffff; --ink:#1f2a24; --sub:#5d6b63; --line:#e3e7e1;
+    --main:#2f7d5b; --main-soft:#e4f1ea; --warn:#b4472f; --warn-soft:#fbebe6;
+    --gold:#b8862a; --gold-soft:#f8f0dd; --gray:#c9cfc8; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    -webkit-text-size-adjust:100%;line-height:1.55}
+  button{font:inherit;cursor:pointer}
+  input,select{font:inherit}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  .narrow{max-width:640px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;
+    background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .brand{font-weight:800;font-size:18px;letter-spacing:-.3px}
+  .brand small{font-weight:500;color:var(--sub);font-size:12px;margin-left:6px}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px}
+  .btn.main{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
+  .btn.warn{background:var(--warn-soft);border-color:#efc9bd;color:var(--warn)}
+  .btn.big{padding:14px 18px;font-size:17px;border-radius:12px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .muted{color:var(--sub)}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--main-soft);color:var(--main);font-weight:700}
+  .tag.gray{background:#eef0ed;color:var(--sub)}
+  .tabs{display:flex;gap:6px;margin:4px 0 16px}
+  .tabs button{border:1px solid var(--line);background:var(--card);padding:8px 16px;border-radius:999px}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  h2.unit{font-size:16px;margin:22px 0 10px;display:flex;gap:8px;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+  .exp{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:left;
+    display:flex;flex-direction:column;gap:6px;min-height:104px}
+  .exp:hover{border-color:var(--main)}
+  .exp b{font-size:15px}
+  .exp .page{font-size:13px;color:var(--main);font-weight:700}
+  .exp .page.empty{color:var(--sub);font-weight:500}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .center{text-align:center}
+  .hero{padding:48px 16px 24px;text-align:center}
+  .hero h1{font-size:26px;margin:0 0 8px;letter-spacing:-.5px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .stack>*+*{margin-top:12px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field input,.field select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .notice{background:var(--gold-soft);color:#6d5113;border-radius:10px;padding:10px 12px;font-size:14px}
+  /* 모달 */
+  .modal-bg{position:fixed;inset:0;background:rgba(20,30,25,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+  .modal{background:var(--card);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:20px}
+  @media(min-width:760px){.modal-bg{align-items:center}.modal{border-radius:18px}}
+  .modal h3{margin:0 0 4px;font-size:20px}
+  .sec{margin-top:16px}
+  .sec h4{margin:0 0 6px;font-size:14px;color:var(--sub)}
+  .sec ul,.sec ol{margin:0;padding-left:20px}
+  .safety{background:var(--warn-soft);border-radius:12px;padding:10px 14px}
+  .safety h4{color:var(--warn)}
+  /* 수업 진행(교사) */
+  .live{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+  @media(max-width:860px){.live{grid-template-columns:1fr}}
+  .qrbox{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;text-align:center}
+  .qrbox svg{width:100%;max-width:280px;height:auto}
+  .code{font-size:40px;font-weight:800;letter-spacing:8px;margin:6px 0 0}
+  .bigstat{font-size:30px;font-weight:800}
+  .steprow{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+  .steprow:first-child{border-top:0}
+  .bar{height:10px;background:#eef0ed;border-radius:999px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;background:var(--main);border-radius:999px;transition:width .3s}
+  .steprow .cnt{text-align:right;font-weight:800;font-size:20px}
+  .steprow .cnt small{font-size:13px;color:var(--sub);font-weight:500}
+  table.board{border-collapse:separate;border-spacing:4px;width:100%;table-layout:fixed;min-width:360px}
+  table.board th:first-child{width:44px}
+  table.board th{font-size:12px;color:var(--sub);font-weight:600}
+  table.board td{height:30px;border-radius:7px;background:#eef0ed;text-align:center;font-size:13px}
+  table.board td.done{background:var(--main);color:#fff}
+  table.board td.g{background:none;font-weight:700;text-align:left;white-space:nowrap}
+  table.board tr.off td.g{color:var(--gray)}
+  table.board tr.off td:not(.g){background:#f4f5f3}
+  /* 학생 */
+  .s-head{background:var(--main);color:#fff;padding:18px 16px 16px}
+  .s-head h1{font-size:21px;margin:4px 0 0;letter-spacing:-.4px}
+  .s-head .meta{font-size:13px;opacity:.9}
+  .groups{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .groups button{padding:22px 0;font-size:22px;font-weight:800;border-radius:14px;border:1px solid var(--line);background:#fff}
+  .groups button.has{border-color:var(--main);color:var(--main)}
+  .check{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .check:first-child{border-top:0}
+  .check input{width:22px;height:22px;accent-color:var(--main)}
+  .step{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;gap:12px}
+  .step .n{flex:0 0 32px;height:32px;border-radius:50%;background:#eef0ed;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .step.next{border-color:var(--main);box-shadow:0 0 0 2px var(--main-soft)}
+  .step.done{background:#f3f8f5}
+  .step.done .n{background:var(--main);color:#fff}
+  .step .txt{flex:1}
+  .step .done-btn{margin-top:10px;width:100%;padding:12px;border-radius:10px;border:0;background:var(--main);color:#fff;font-weight:800;font-size:16px}
+  .step.done .done-btn{background:#fff;color:var(--main);border:1px solid var(--main)}
+  .predict{background:var(--gold-soft);border-radius:var(--radius);padding:14px}
+  .locked{background:#eef0ed;border-radius:var(--radius);padding:16px;color:var(--sub);text-align:center}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;z-index:50;font-size:14px}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:24px 16px 40px}
+  .stepbig{background:#fff;border:2px solid var(--main);border-radius:var(--radius);padding:22px 18px}
+  .stxt{font-size:22px;font-weight:700;line-height:1.5;letter-spacing:-.3px;margin-top:10px}
+  .card.cur .stxt{font-size:24px}
+  .go-btn{width:100%;padding:18px;border:0;border-radius:14px;background:var(--main);color:#fff;font-size:20px;font-weight:800}
+  .go-btn:disabled{opacity:.5}
+  .wait{background:var(--main-soft);border-radius:var(--radius);padding:16px;text-align:center;color:#1f5a40}
+  .dots{display:flex;gap:4px;margin-top:12px}
+  .dots i{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.3)}
+  .dots i.on{background:#fff}
+  details.card summary{cursor:pointer;font-weight:700}
+  table.board th.now{color:var(--main);font-weight:800}
+  table.board td.later{background:#f7f8f6}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="lib/qrcode.js"></script>
+<script src="data.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+파이어베이스 콘솔 > Firestore Database > 규칙 탭에 아래를 통째로 붙여 넣고 [게시]를 누르세요.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isTeacher() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // 선생님 개인 설정
+    match /teachers/{uid} {
+      allow read, write: if isTeacher() && request.auth.uid == uid;
+    }
+
+    // 출판사별 교과서 쪽수 (선생님끼리 함께 채움)
+    match /pages/{pub} {
+      allow read: if signedIn();
+      allow write: if isTeacher();
+    }
+
+    // 수업
+    match /sessions/{code} {
+      allow read: if signedIn();
+      allow create: if isTeacher() && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isTeacher() && resource.data.owner == request.auth.uid;
+
+      // 조별 진행 (학생은 익명 로그인)
+      match /groups/{g} {
+        allow read: if signedIn();
+        allow write: if signedIn()
+          && get(/databases/$(db)/documents/sessions/$(code)).data.active == true
+          && request.resource.data.keys().hasOnly(['group', 'done', 'members']);
+      }
+    }
+  }
+}
