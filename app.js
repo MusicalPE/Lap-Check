@@ -1,13 +1,13 @@
 /* 실험첵! Lab-Check! — 앱 본체 */
 (function () {
   "use strict";
-  var APP_VERSION = "1.3.0";
+  var APP_VERSION = "1.3.1";
   var ASSET = window.SCI_ASSETS || { logoH: "assets/logo-horizontal.png", logoS: "assets/logo-stacked.png" };
   var D = window.SCI_DATA;
   var $app = document.getElementById("app");
   var params = new URLSearchParams(location.search);
   var cfg = window.FIREBASE_CONFIG || {};
-  var DEMO = params.get("demo") === "1" || !cfg.apiKey;
+  var DEMO = (params.has("demo") && params.get("demo") !== "0") || !cfg.apiKey; // 주소 끝 ?demo 로 체험 모드
   var PREVIEW = !!window.SCI_PREVIEW; // 아티팩트 미리보기용(한 화면 안에서 교사·학생 오가기)
 
   // ─────────────── 공통 도구 ───────────────
