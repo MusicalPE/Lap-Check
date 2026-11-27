@@ -29,7 +29,8 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if signedIn()
           && get(/databases/$(db)/documents/sessions/$(code)).data.active == true
-          && request.resource.data.keys().hasOnly(['group', 'done', 'members']);
+          && request.resource.data.keys().hasOnly(['group', 'done', 'members', 'prediction'])
+          && (!('prediction' in request.resource.data) || (request.resource.data.prediction is string && request.resource.data.prediction.size() <= 200));
       }
     }
   }

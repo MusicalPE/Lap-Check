@@ -1,7 +1,7 @@
 /* 실험첵! Lab-Check! — 앱 본체 */
 (function () {
   "use strict";
-  var APP_VERSION = "1.2.0";
+  var APP_VERSION = "1.3.0";
   var ASSET = window.SCI_ASSETS || { logoH: "assets/logo-horizontal.png", logoS: "assets/logo-stacked.png" };
   var D = window.SCI_DATA;
   var $app = document.getElementById("app");
@@ -135,6 +135,11 @@
         var g = s.groups[n] || { group: n, done: [], members: {} };
         g.members[dev] = Date.now(); s.groups[n] = g; save(d); return Promise.resolve();
       },
+      setPrediction: function (code, n, text) {
+        var d = db(), s = d.sessions[code]; if (!s || !s.active) return Promise.reject(new Error("closed"));
+        var g = s.groups[n] || { group: n, done: [], members: {} };
+        g.prediction = text; s.groups[n] = g; save(d); return Promise.resolve();
+      },
       setStepDone: function (code, n, idx, on) {
         var d = db(), s = d.sessions[code]; if (!s || !s.active) return Promise.reject(new Error("closed"));
         var g = s.groups[n] || { group: n, done: [], members: {} };
@@ -219,6 +224,9 @@
         var m = {}; m[dev] = Date.now();
         return ready.then(function () { return sref(code).collection("groups").doc(String(n)).set({ group: n, members: m }, { merge: true }); });
       },
+      setPrediction: function (code, n, text) {
+        return ready.then(function () { return sref(code).collection("groups").doc(String(n)).set({ group: n, prediction: text }, { merge: true }); });
+      },
       setStepDone: function (code, n, idx, on) {
         return ready.then(function () {
           return sref(code).collection("groups").doc(String(n)).set({ group: n, done: on ? FV.arrayUnion(idx) : FV.arrayRemove(idx) }, { merge: true });
@@ -231,7 +239,7 @@
 
   // ─────────────── 교사 쪽 상태 ───────────────
   var T = {
-    user: null, settings: { publisher: "iscream", groupCount: 6, grade: 5, sem: 1 },
+    user: null, settings: { publisher: "iscream", groupCount: 6, grade: 5, sem: 1, predictMode: "choice" },
     pages: {}, session: null, groups: [], unsub: []
   };
   function clearSubs() { T.unsub.forEach(function (f) { f(); }); T.unsub = []; }
@@ -321,10 +329,11 @@
   function expBody(e, showResult) {
     var h = '<div class="sec"><h4>준비물</h4><ul>' + e.materials.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul></div>" +
       '<div class="sec safety"><h4>안전 주의</h4><ul>' + e.safety.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul></div>" +
-      '<div class="sec"><h4>예측해 봐요</h4><div>' + esc(e.predict) + "</div></div>" +
+      '<div class="sec"><h4>예측해 봐요</h4><div>' + esc(e.predict) + "</div>" +
+      (e.choices ? '<div class="muted" style="font-size:13px;margin-top:4px">고르기 보기: ' + e.choices.map(esc).join(" / ") + "</div>" : "") + "</div>" +
       '<div class="sec"><h4>실험 순서</h4><ol>' + e.steps.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ol></div>";
     if (showResult !== false) {
-      h += '<div class="sec"><h4>예상 결과</h4><ul>' + e.results.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul></div>";
+      h += '<div class="sec"><h4>실험 결과</h4><ul>' + e.results.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul></div>";
     }
     h += '<div class="sec"><h4>생각해 볼 질문</h4><ul>' + e.questions.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul></div>";
     return h;
@@ -342,6 +351,10 @@
       '<button class="btn" id="pSave" style="align-self:flex-end">저장</button></div>' +
       '<div class="muted" style="font-size:12px;margin-top:6px">같은 교과서를 쓰는 선생님들과 함께 쓰는 쪽수예요. 한 번 넣으면 모두에게 보여요.</div></div>' +
       expBody(e, true) +
+      '<div class="sec card" style="padding:12px"><h4 style="margin:0 0 6px">이번 수업의 예측 방식</h4><div class="row">' +
+      '<label class="check" style="border:0;padding:4px 12px 4px 0"><input type="radio" name="pm" value="choice"' + (T.settings.predictMode !== "text" ? " checked" : "") + '><span>보기에서 고르기</span></label>' +
+      '<label class="check" style="border:0;padding:4px 0"><input type="radio" name="pm" value="text"' + (T.settings.predictMode === "text" ? " checked" : "") + '><span>글로 적기</span></label></div>' +
+      '<div class="muted" style="font-size:12px">반에 맞게 수업마다 바꿀 수 있어요. 기본값은 설정에서 정해요.</div></div>' +
       '<div class="row" style="margin-top:20px;justify-content:flex-end"><button class="btn" id="close">닫기</button><button class="btn main big" id="start">이 실험으로 수업 시작</button></div>'
     );
     bg.querySelector("#close").onclick = function () { bg.remove(); };
@@ -355,7 +368,8 @@
       var btn = this; btn.disabled = true;
       store.createSession({
         owner: T.user.uid, expId: id, publisher: T.settings.publisher,
-        page: T.pages[id] || null, groupCount: T.settings.groupCount
+        page: T.pages[id] || null, groupCount: T.settings.groupCount,
+        predictMode: (bg.querySelector('input[name="pm"]:checked') || {}).value === "text" ? "text" : "choice"
       }).then(function (code) {
         bg.remove();
         lsSet("sci_last_session", code);
@@ -373,7 +387,9 @@
     var bg = modal("<h3>설정</h3>" +
       '<div class="stack sec"><label class="field"><span>학교에서 쓰는 교과서</span><select id="sPub">' + opts + "</select></label>" +
       '<label class="field"><span>학년</span><select id="sGrade"><option value="5" selected>5학년</option></select></label>' +
-      '<label class="field"><span>우리 반 조 수</span><select id="sGroup">' + gopts + "</select></label></div>" +
+      '<label class="field"><span>우리 반 조 수</span><select id="sGroup">' + gopts + "</select></label>" +
+      '<label class="field"><span>예측 방식 기본값</span><select id="sPred"><option value="choice"' + (s.predictMode !== "text" ? " selected" : "") + '>보기에서 고르기</option><option value="text"' + (s.predictMode === "text" ? " selected" : "") + '>글로 적기</option></select>' +
+      '<span class="muted" style="font-size:12px">수업을 시작할 때 반마다 다시 고를 수 있어요.</span></label></div>' +
       '<div class="row" style="margin-top:20px;justify-content:flex-end"><button class="btn" id="close">닫기</button><button class="btn main" id="save">저장</button></div>');
     bg.querySelector("#close").onclick = function () { bg.remove(); };
     bg.querySelector("#save").onclick = function () {
@@ -382,6 +398,7 @@
       T.settings.publisher = pub;
       T.settings.grade = Number(bg.querySelector("#sGrade").value);
       T.settings.groupCount = Number(bg.querySelector("#sGroup").value);
+      T.settings.predictMode = bg.querySelector("#sPred").value;
       saveSettings(); bg.remove();
       if (changed) loadPages().then(renderMain); else renderMain();
     };
@@ -410,19 +427,23 @@
     T.unsub.push(store.watchGroups(code, function (g) { T.groups = g || []; drawLive(code); }));
   }
 
+  // 장 순서: 0 준비 · 1 예측 · 2~(N+1) 실험 단계 · N+2 결과
   function stageInfo(e, stage) {
     var N = e.steps.length;
-    if (stage <= 0) return { label: "준비", text: "준비물 챙기기 · 안전 약속 읽기 · 결과 예측하기" };
-    if (stage <= N) return { label: stage + "단계 / " + N, text: e.steps[stage - 1] };
-    return { label: "결과", text: "예상 결과와 생각해 볼 질문" };
+    if (stage <= 0) return { kind: "prep", label: "준비", text: "준비물 챙기기 · 안전 약속 읽기" };
+    if (stage === 1) return { kind: "predict", label: "예측", text: e.predict };
+    if (stage <= N + 1) return { kind: "step", n: stage - 1, label: (stage - 1) + "단계 / " + N, text: e.steps[stage - 2] };
+    return { kind: "result", label: "결과", text: "실험 결과와 생각해 볼 질문" };
   }
+  function stageShort(e, k) { var N = e.steps.length; return k === 0 ? "준비" : k === 1 ? "예측" : k <= N + 1 ? String(k - 1) : "결과"; }
+  function predictModeName(m) { return m === "text" ? "글로 적기" : "보기에서 고르기"; }
 
   function drawLive(code) {
     var box = document.getElementById("liveRight"); if (!box) return;
     var s = T.session;
     if (!s) { box.innerHTML = '<div class="card">수업 정보를 불러오는 중이에요.</div>'; return; }
-    var e = expById(s.expId), N = e.steps.length;
-    var stage = Math.min(s.stage || 0, N + 1);
+    var e = expById(s.expId), N = e.steps.length, LAST = N + 2;
+    var stage = Math.min(s.stage || 0, LAST);
     var gc = s.groupCount || 6;
     var byNo = {}; T.groups.forEach(function (g) { byNo[g.group] = g; });
     var joined = T.groups.filter(function (g) { return g.group >= 1 && g.group <= gc; });
@@ -432,50 +453,59 @@
     var waiting = joined.filter(function (g) { return (g.done || []).indexOf(stage) < 0; }).map(function (g) { return g.group; }).sort(function (a, b) { return a - b; });
     var allIn = nJoin > 0 && doneNow.length === nJoin;
     var info = stageInfo(e, stage);
-    var nextLabel = stage === 0 ? "1단계 열기" : stage < N ? (stage + 1) + "단계 열기" : "결과 열기";
+    var nextLabel = stage === 0 ? "예측 열기" : stage === 1 ? "1단계 열기" : stage <= N ? (stage) + "단계 열기" : "결과 열기";
     var pct = nJoin ? Math.round(doneNow.length / nJoin * 100) : 0;
 
     var h = '<div class="card"><div class="muted" style="font-size:13px">' + e.sem + "학기 " + e.unit + ". " + esc(unitName(e.grade, e.sem, e.unit)) +
-      (s.page ? " · " + esc(pageText(s.page)) : "") + "</div><h3 style=\"margin:2px 0 0\">" + esc(e.title) + "</h3>" +
+      (s.page ? " · " + esc(pageText(s.page)) : "") + " · 예측: " + predictModeName(s.predictMode) + "</div><h3 style=\"margin:2px 0 0\">" + esc(e.title) + "</h3>" +
       (s.active ? "" : '<div class="notice" style="margin-top:8px">끝난 수업이에요.</div>') + "</div>";
 
     h += '<div class="card cur"><div class="row" style="justify-content:space-between"><span class="tag">지금 학생 화면 · ' + esc(info.label) + "</span>" +
       '<span class="muted" style="font-size:13px">들어온 조 ' + nJoin + " / " + gc + " · 기기 " + devices + "대</span></div>" +
       '<div class="stxt" style="margin:10px 0 4px">' + esc(info.text) + "</div>";
-    if (stage <= N) {
+    if (stage < LAST) {
       h += '<div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:10px"><div class="muted">다했어요 누른 조</div>' +
         '<div class="bigstat" id="nowCnt">' + doneNow.length + ' <small class="muted" style="font-size:15px">/ ' + nJoin + "조</small></div></div>" +
         '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
         '<div class="muted" style="font-size:14px;margin-top:8px" id="waitList">' +
-        (nJoin === 0 ? "아직 들어온 조가 없어요." : waiting.length ? "아직: " + waiting.map(function (g) { return g + "조"; }).join(", ") : "모든 조가 다했어요. 다음 단계를 열 수 있어요.") + "</div>" +
-        '<div class="row" style="margin-top:14px;justify-content:space-between">' +
-        (stage > 0 ? '<button class="btn" id="prevBtn"' + (s.active ? "" : " disabled") + ">이전 단계로</button>" : "<span></span>") +
-        '<div class="row">' + (!allIn && nJoin > 0 ? '<button class="btn" id="forceBtn"' + (s.active ? "" : " disabled") + ">기다리지 않고 열기</button>" : "") +
-        '<button class="btn main big" id="nextBtn"' + (allIn && s.active ? "" : " disabled") + ">" + nextLabel + "</button></div></div>";
+        (nJoin === 0 ? "아직 들어온 조가 없어요." : waiting.length ? "아직: " + waiting.map(function (g) { return g + "조"; }).join(", ") : "모든 조가 다했어요. 다음 장을 열 수 있어요.") + "</div>";
     } else {
-      h += '<div class="muted" style="margin-top:6px">학생 화면에 예상 결과와 질문이 열렸어요.</div>' +
-        '<div class="row" style="margin-top:14px"><button class="btn" id="prevBtn"' + (s.active ? "" : " disabled") + ">이전 단계로</button></div>";
+      h += '<div class="muted" style="margin-top:6px">학생 화면에 우리 조 예측과 실험 결과, 생각해 볼 질문이 열렸어요.</div>';
     }
-    h += "</div>";
+    // 예측 모아 보기(예측 장부터)
+    if (stage >= 1) {
+      h += '<div class="sec"><h4>조별 예측</h4><div class="preds">';
+      for (var gi = 1; gi <= gc; gi++) {
+        var gd0 = byNo[gi]; if (!gd0) continue;
+        h += '<div class="pred"><b>' + gi + '조</b><span>' + (gd0.prediction ? esc(gd0.prediction) : '<span class="muted">아직 안 적었어요</span>') + "</span></div>";
+      }
+      if (!nJoin) h += '<div class="muted">들어온 조가 없어요.</div>';
+      h += "</div></div>";
+    }
+    h += '<div class="row" style="margin-top:14px;justify-content:space-between">' +
+      (stage > 0 ? '<button class="btn" id="prevBtn"' + (s.active ? "" : " disabled") + ">이전 장으로</button>" : "<span></span>") +
+      (stage < LAST ? '<div class="row">' + (!allIn && nJoin > 0 ? '<button class="btn" id="forceBtn"' + (s.active ? "" : " disabled") + ">기다리지 않고 열기</button>" : "") +
+        '<button class="btn main big" id="nextBtn"' + (allIn && s.active ? "" : " disabled") + ">" + nextLabel + "</button></div>" : "") +
+      "</div></div>";
 
     h += '<div class="card"><b>조별 진행</b><div style="overflow-x:auto"><table class="board" style="margin-top:8px"><tr><th></th>';
-    for (var k = 0; k <= N; k++) h += '<th class="' + (k === stage ? "now" : "") + '">' + (k === 0 ? "준비" : k) + "</th>";
+    for (var k = 0; k <= N + 1; k++) h += '<th class="' + (k === stage ? "now" : "") + '">' + stageShort(e, k) + "</th>";
     h += "</tr>";
     for (var g = 1; g <= gc; g++) {
       var gd = byNo[g]; var d = (gd && gd.done) || [];
       h += '<tr class="' + (gd ? "" : "off") + '"><td class="g">' + g + "조</td>";
-      for (var j = 0; j <= N; j++) h += '<td class="' + (d.indexOf(j) >= 0 ? "done" : "") + (j > stage ? " later" : "") + '">' + (d.indexOf(j) >= 0 ? "끝" : "") + "</td>";
+      for (var j = 0; j <= N + 1; j++) h += '<td class="' + (d.indexOf(j) >= 0 ? "done" : "") + (j > stage ? " later" : "") + '">' + (d.indexOf(j) >= 0 ? "끝" : "") + "</td>";
       h += "</tr>";
     }
     h += "</table></div></div>";
     h += '<div class="row" style="justify-content:flex-end"><button class="btn warn" id="endBtn"' + (s.active ? "" : " disabled") + ">수업 끝내기</button></div>";
     box.innerHTML = h;
 
-    function go(n) { store.updateSession(code, { stage: n, showResult: n > N }); }
+    function go(n) { store.updateSession(code, { stage: n, showResult: n >= LAST }); }
     var nb = document.getElementById("nextBtn"); if (nb) nb.onclick = function () { go(stage + 1); };
     var fb = document.getElementById("forceBtn");
     if (fb) fb.onclick = function () {
-      askConfirm("아직 " + waiting.map(function (x) { return x + "조"; }).join(", ") + "가 끝내지 않았어요. 그래도 다음 화면을 열까요?", nextLabel, function () { go(stage + 1); });
+      askConfirm("아직 " + waiting.map(function (x) { return x + "조"; }).join(", ") + "가 끝내지 않았어요. 그래도 다음 장을 열까요?", nextLabel, function () { go(stage + 1); });
     };
     var pb = document.getElementById("prevBtn"); if (pb) pb.onclick = function () { go(Math.max(0, stage - 1)); };
     var eb = document.getElementById("endBtn");
@@ -539,17 +569,24 @@
 
   function renderStudent() {
     var s = S.session; if (!s) return;
-    var e = expById(s.expId), N = e.steps.length;
-    var stage = Math.min(s.stage || 0, N + 1);
-    var done = (S.gdata && S.gdata.done) || [];
+    var e = expById(s.expId), N = e.steps.length, LAST = N + 2;
+    var stage = Math.min(s.stage || 0, LAST);
+    var mode = s.predictMode === "text" ? "text" : "choice";
+    var gdat = S.gdata || {};
+    var done = gdat.done || [];
     var meDone = done.indexOf(stage) >= 0;
+    var myPred = gdat.prediction || "";
     var checks = lsGet("sci_mat_" + S.code, {});
     var changed = S.lastStage !== stage; S.lastStage = stage;
+    // 글 쓰는 중에는 다시 그리지 않기(같은 장, 아직 안 끝냄, 입력 칸에 글이 있을 때)
+    var ta = document.getElementById("predText");
+    if (!changed && ta && document.activeElement === ta && !meDone) return;
+    var draft = ta ? ta.value : null;
     var y = changed ? 0 : window.scrollY;
     var info = stageInfo(e, stage);
     function li(a) { return a.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join(""); }
 
-    var dots = ""; for (var k = 0; k <= N + 1; k++) dots += '<i class="' + (k <= stage ? "on" : "") + '"></i>';
+    var dots = ""; for (var k = 0; k <= LAST; k++) dots += '<i class="' + (k <= stage ? "on" : "") + '"></i>';
     var h = '<div class="s-head"><div class="row" style="justify-content:space-between"><div class="meta">' + e.sem + "학기 " + e.unit + ". " + esc(unitName(e.grade, e.sem, e.unit)) + "</div>" +
       '<div class="row" style="gap:6px">' + (PREVIEW && T.user ? '<button class="btn" id="pvT" style="padding:4px 10px;font-size:13px">선생님 화면</button>' : "") +
       '<button class="btn" id="chg" style="padding:4px 10px;font-size:13px">' + S.group + "조 · 바꾸기</button></div></div>" +
@@ -558,30 +595,49 @@
       '<div class="wrap narrow stack">' +
       (s.active ? "" : '<div class="notice">수업이 끝났어요. 내용은 계속 볼 수 있어요.</div>');
 
-    function doneBlock(label) {
-      if (stage > N) return "";
-      if (!meDone) return '<button class="go-btn" id="doneBtn"' + (s.active ? "" : " disabled") + ">" + label + "</button>";
+    function waitBox() {
       return '<div class="wait"><b>우리 조는 다했어요</b><div>다른 조를 기다리고 있어요. 선생님이 다음 장을 열면 화면이 바뀌어요.</div>' +
         '<button class="btn" id="undoBtn" style="margin-top:10px"' + (s.active ? "" : " disabled") + ">아직 덜 했어요(취소)</button></div>";
     }
+    function doneBlock(label) {
+      if (!meDone) return '<button class="go-btn" id="doneBtn"' + (s.active ? "" : " disabled") + ">" + label + "</button>";
+      return waitBox();
+    }
 
-    if (stage === 0) {
+    if (info.kind === "prep") {
       h += '<div class="tag">준비</div><div class="muted">' + esc(e.goal) + "</div>" +
         '<div class="card"><b>준비물</b><div style="margin-top:6px">' +
         e.materials.map(function (m, i) {
           return '<label class="check"><input type="checkbox" data-m="' + i + '"' + (checks[i] ? " checked" : "") + "><span>" + esc(m) + "</span></label>";
         }).join("") + "</div></div>" +
         '<div class="safety"><h4 style="margin:0 0 4px;color:var(--warn)">안전 약속</h4><ul style="margin:0;padding-left:20px">' + li(e.safety) + "</ul></div>" +
-        '<div class="predict"><b>예측해 봐요</b><div>' + esc(e.predict) + "</div></div>" +
         doneBlock("준비 다했어요");
-    } else if (stage <= N) {
-      h += '<div class="stepbig"><div class="tag">' + stage + " / " + N + ' 단계</div><div class="stxt">' + esc(info.text) + "</div></div>" +
+    } else if (info.kind === "predict") {
+      h += '<div class="stepbig"><div class="tag">예측하기</div><div class="stxt">' + esc(e.predict) + "</div>" +
+        '<div class="muted" style="font-size:14px;margin-top:8px">실험하기 전에 우리 조의 생각을 정해요. 맞고 틀리고는 실험이 알려 줘요.</div></div>';
+      if (meDone) {
+        h += '<div class="predict"><b>우리 조 예측</b><div>' + esc(myPred) + "</div></div>" + waitBox();
+      } else if (mode === "choice" && e.choices && e.choices.length) {
+        h += '<div class="card"><b>하나를 골라요</b><div style="margin-top:6px">' +
+          e.choices.map(function (c, i) {
+            return '<label class="check"><input type="radio" name="pc" value="' + i + '"' + (myPred === c ? " checked" : "") + "><span>" + esc(c) + "</span></label>";
+          }).join("") + "</div></div>" +
+          '<button class="go-btn" id="predBtn"' + (s.active ? "" : " disabled") + ">이걸로 예측했어요</button>";
+      } else {
+        h += '<div class="card"><b>우리 조의 예측을 적어요</b>' +
+          '<textarea id="predText" maxlength="200" rows="4" placeholder="예: 자갈이 맨 아래에 있을 것 같아요. 무거워서 먼저 가라앉으니까요." style="width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;resize:vertical">' +
+          esc(draft != null ? draft : myPred) + '</textarea><div class="muted" style="font-size:12px;text-align:right">200자까지</div></div>' +
+          '<button class="go-btn" id="predBtn"' + (s.active ? "" : " disabled") + ">이걸로 예측했어요</button>";
+      }
+    } else if (info.kind === "step") {
+      h += '<div class="stepbig"><div class="tag">' + info.n + " / " + N + ' 단계</div><div class="stxt">' + esc(info.text) + "</div></div>" +
         doneBlock("다했어요") +
+        (myPred ? '<details class="card"><summary>우리 조 예측 다시 보기</summary><div style="margin-top:8px">' + esc(myPred) + "</div></details>" : "") +
         '<details class="card"><summary>안전 약속 다시 보기</summary><ul style="margin:8px 0 0;padding-left:20px">' + li(e.safety) + "</ul></details>" +
-        (stage > 1 ? '<details class="card"><summary>앞 단계 다시 보기</summary><ol style="margin:8px 0 0;padding-left:20px">' + li(e.steps.slice(0, stage - 1)) + "</ol></details>" : "");
+        (info.n > 1 ? '<details class="card"><summary>앞 단계 다시 보기</summary><ol style="margin:8px 0 0;padding-left:20px">' + li(e.steps.slice(0, info.n - 1)) + "</ol></details>" : "");
     } else {
-      h += '<div class="predict"><b>처음에 예측한 것</b><div>' + esc(e.predict) + "</div></div>" +
-        '<div class="card"><b>예상 결과</b><ul style="margin:6px 0 0;padding-left:20px">' + li(e.results) + "</ul></div>" +
+      h += '<div class="predict"><b>' + esc(e.predict) + '</b><div style="margin-top:6px">우리 조 예측: ' + (myPred ? esc(myPred) : '<span class="muted">적지 않았어요</span>') + "</div></div>" +
+        '<div class="card"><b>실험 결과</b><ul style="margin:6px 0 0;padding-left:20px">' + li(e.results) + "</ul></div>" +
         '<div class="card"><b>생각해 볼 질문</b><ul style="margin:6px 0 0;padding-left:20px">' + li(e.questions) + "</ul></div>" +
         '<details class="card"><summary>실험 순서 다시 보기</summary><ol style="margin:8px 0 0;padding-left:20px">' + li(e.steps) + "</ol></details>";
     }
@@ -598,6 +654,22 @@
     }
     var db = document.getElementById("doneBtn"); if (db) db.onclick = function () { mark(true, db); };
     var ub = document.getElementById("undoBtn"); if (ub) ub.onclick = function () { mark(false, ub); };
+    var pbtn = document.getElementById("predBtn");
+    if (pbtn) pbtn.onclick = function () {
+      var val = "";
+      if (mode === "choice" && e.choices && e.choices.length) {
+        var r = $app.querySelector('input[name="pc"]:checked');
+        if (!r) return toast("하나를 골라 주세요.");
+        val = e.choices[Number(r.value)];
+      } else {
+        val = (document.getElementById("predText").value || "").trim();
+        if (val.length < 2) return toast("예측을 적어 주세요.");
+      }
+      pbtn.disabled = true;
+      store.setPrediction(S.code, S.group, val.slice(0, 200)).then(function () {
+        return store.setStepDone(S.code, S.group, stage, true);
+      }).catch(function () { toast("저장하지 못했어요. 다시 눌러 주세요."); pbtn.disabled = false; });
+    };
     var pv = document.getElementById("pvT");
     if (pv) pv.onclick = function () { previewToTeacher(S.code); };
     document.getElementById("chg").onclick = function () {
